@@ -70,8 +70,7 @@ class Parser:
             self.eat("(")
             print(self.value())
             self.eat(")")
-            self.eat(";")
-            
+            self.eat(";")    
     
     def parse_create_function(self):
         self.eat("function")
@@ -89,11 +88,15 @@ class Parser:
                 args.append(str(to_add))
         self.eat("{")
         body = []
-        while True:
+        depth = 1
+        while depth != 0:
             to_add = self.eat()
             if to_add == "}":
-                break
+                depth -= 1
+            elif to_add == "if" or to_add == "else":
+                depth += 1
             body.append(to_add)
+        body.pop()
         functions[name] = {"body":body, "args":args}
         self.eat(";")
 
