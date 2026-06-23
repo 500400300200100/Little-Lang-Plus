@@ -160,7 +160,7 @@ class Parser:
         self.eat(";")
         vars[name] = {"type": type, "value": value}
 
-    def parse_if(self):
+    def parse_if(self, is_true):
         self.eat()
         self.eat("(")
         value = self.value()
@@ -221,7 +221,10 @@ class Interpreter:
             elif current == "return":
                 parser.parse_return()
             elif current == "if":
-                parser.parse_if()
+                parser.parse_if(False)
+            else:
+                print(f"You screwed up right about here -> '{current}'")
+                break
 
 # Main
 
