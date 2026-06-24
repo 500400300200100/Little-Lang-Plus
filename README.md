@@ -4,7 +4,7 @@
 
 Welcome to the codebase of Little Lang Plus. The littlest langauge you can find! Constant updates keep the project on track to make it alittle, less little ;). I hope you find as much joy in Little Lang Plus as I do.
 
-How to run:
+# How to run:
 
 Setup
 
