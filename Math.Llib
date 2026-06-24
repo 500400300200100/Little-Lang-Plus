@@ -1,0 +1,20 @@
+function public add(Int a, Int b, Str return) {
+change @a + @b;
+return Ret @return as @a;
+};
+
+function public sub(Int a, Int b, Str return) {
+change @a - @b;
+return Ret @return as @a;
+};
+
+function public mult(Int a, Int b, Str return) {
+change @a * @b;
+return Ret @return as @a;
+};
+
+function public div(Int a, Int b, Str return) {
+change @a / @b;
+return Ret @return as @a;
+};
+
