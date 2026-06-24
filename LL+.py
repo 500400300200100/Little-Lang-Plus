@@ -42,39 +42,47 @@ class Parser:
         self.pointer += 1
         return token
     
-    def value(self):
+    def value(self, give_type=False, give_before=False):
         value = self.eat()
+        type = None
+        vb = None
         if value == "@":
-            value = vars[self.eat()]["value"]
+            vb = self.eat()
+            value = vars[vb]["value"]
+            type = "var"
         elif value == '"':
             value = ""
+            type = "str"
             while True:
                 to_add = self.eat()
                 if to_add == '"':
                     break
                 value = value + to_add
                 value = value + " "
-        return value
+        else:
+            type = "int"
+        return value, type, vb
     
     def parse_set_var(self):
         self.eat("set")
         type = self.eat()
         name = self.eat()
         self.eat("=")
-        value = self.value()
+        value, *_ = self.value()
         self.eat(";")
         vars[name] = {"type": type, "value": value}
 
     def parse_print(self):
             self.eat("print")
             self.eat("(")
-            print(self.value())
+            value, *_ = self.value()
+            print(value)
             self.eat(")")
             self.eat(";")    
     
     def parse_create_function(self):
         self.eat("function")
-        self.eat()
+        ftype = self.eat()
         name = self.eat()
         self.eat("(")
         args = []
@@ -139,7 +147,8 @@ class Parser:
         self.eat("@")
         var = self.eat()
         operation = self.eat()
-        value = int(self.value())
+        value, *_ = self.value()
+        value = int(value)
         self.eat(";")
         var_value = int(vars[var]["value"])
         if operation == "+":
@@ -154,18 +163,18 @@ class Parser:
     def parse_return(self):
         self.eat("return")
         type = self.eat()
-        name = self.eat()
+        name, *_ = self.value()
         self.eat("as")
-        value = self.value()
+        value, *_ = self.value()
         self.eat(";")
         vars[name] = {"type": type, "value": value}
 
     def parse_if(self, is_true):
         self.eat()
         self.eat("(")
-        value = self.value()
+        value, *_ = self.value()
         operation = self.eat()
-        second = self.value()
+        second, *_ = self.value()
         self.eat(")")
         self.eat("{")
         tokens = []
@@ -203,6 +212,109 @@ class Parser:
         if is_true == False:
             Interpreter(tokens, Parser(tokens))
 
+    def parse_pull(self):
+        self.eat("pull")
+        name = self.eat()
+        libs.append(name)
+        self.eat(";")
+        path = file_path.split('\\')
+        print(path)
+        path.pop()
+        print(path)
+        path.append(name + ".Llib")
+        path = "\\".join(path)
+        print(path)
+        lib_code = readFile(path)
+        lib_tokens = tokenize(lib_code)
+        Interpreter(lib_tokens, Parser(lib_tokens))
+
+    def parse_use_lib(self):
+        self.eat("lib")
+        name = self.eat()
+        self.eat(".")
+        function = functions[self.eat()]
+        tokens = function["body"]
+        self.eat("(")
+        i = 0
+        while True:
+            value = None
+            arg = self.eat()
+            if arg == '"':
+                value = self.eat()
+                self.eat('"')
+            elif arg == "@":
+                value = vars[self.eat()]["value"]
+            elif arg == ",":
+                pass
+            elif arg == ")":
+                break
+            else:
+                value = int(arg)
+            if arg != ",":
+                type = function["args"][i]
+                name = function["args"][i+1]
+                add_var = ["set", type, name, "=", value, ";"]
+                tokens = add_var + tokens
+                i += 2
+        self.eat(";")
+        Interpreter(tokens, Parser(tokens))
+        a = 1
+        while a < len(function["args"]):
+            if function["args"][a] in vars:
+                del vars[function["args"][a]]
+            a += 2
+
+    def parse_take(self):
+        self.eat("take")
+        self.eat("{")
+        body = []
+        depth = 1
+        while depth != 0:
+            to_add = self.eat()
+            if to_add == "}":
+                depth -= 1
+            elif to_add == "if" or to_add == "else":
+                depth += 1
+            elif ">" in list(to_add):
+                to_add = list(to_add)
+                to_add[to_add.index(">")] = "\t"
+                "".join(to_add)
+            elif "^" in list(to_add):
+                to_add = list(to_add)
+                to_add[to_add.index("^")] = " "
+                "".join(to_add)
+            body.append(to_add)
+        body.pop()
+        body = "".join(body)
+        self.eat(";")
+        exec(body)
+
+    def parse_while(self):
+        self.eat("while")
+        self.eat("(")
+        value, vt, vp = self.value(True, True)
+        operation = self.eat()
+        second, st, sp = self.value(True, True)
+        self.eat(")")
+        self.eat("{")
+        tokens = []
+        while True:
+            to_add = self.eat()
+            if to_add == "}":
+                self.eat(";")
+                break
+            tokens.append(to_add)
+        final = value + operation + second
+        while eval(final):
+            Interpreter(tokens, Parser(tokens))
+            if vt == "var":
+                value = vars[vp]["value"]
+            if st == "var":
+                value = vars[sp]["value"]
+            final = str(value) + str(operation) + str(second)
+
+
+
 # "Interpreter"... Not really... Same with the "Parser"... Not like normal but works ;)
 class Interpreter:
     def __init__(self, tokens, parser):
@@ -222,11 +334,20 @@ class Interpreter:
                 parser.parse_return()
             elif current == "if":
                 parser.parse_if(False)
+            elif current == "pull":
+                parser.parse_pull()
+            elif current == "lib":
+                parser.parse_use_lib()
+            elif current == "take":
+                parser.parse_take()
+            elif current == "while":
+                parser.parse_while()
             else:
                 print(f"You screwed up right about here -> '{current}'")
                 break
 
 # Main
+libs = []
 
 vars = {
 }
